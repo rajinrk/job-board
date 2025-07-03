@@ -1,8 +1,6 @@
-'use client';
-import { useState, useEffect } from 'react';
+'use client';import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { toastError, Text } from '@/ui-kits';
-import UIButton from '@/ui-kits/button';
 
 import {
   jobsAtom,
@@ -22,23 +20,46 @@ const HomeJobs = () => {
   const setSelectedJob = useSetAtom(selectedJobAtom);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const lastJobRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (loading || !hasMore) return;
+
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadJobs(page + 1);
+        }
+      });
+
+      if (node) observer.current.observe(node);
+    },
+    [loading, page, hasMore]
+  );
 
   useEffect(() => {
     if (jobs?.length == 0) {
       loadJobs(1, true);
+      return;
     }
-  }, []);
-
-  useEffect(() => {
     loadJobs(page, false);
   }, [filters]);
 
   const loadJobs = async (pageNum: number, reset = false) => {
     setLoading(true);
     try {
-      const newJobs = await fetchJobs(pageNum, filters);
+      const newJobs = await fetchJobs(pageNum);
+      if (newJobs.length === 0) {
+        setHasMore(false);
+      }
+
       if (reset) {
         setJobs(newJobs);
+        setHasMore(true);
       } else {
         const seen = new Set();
         const uniqueJobs = [...jobs, ...newJobs].filter((job: Job) => {
@@ -54,12 +75,6 @@ const HomeJobs = () => {
       toastError('Failed to load jobs. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadMore = () => {
-    if (!loading) {
-      loadJobs(page + 1);
     }
   };
 
@@ -111,28 +126,25 @@ const HomeJobs = () => {
         </div>
 
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredJobs?.length > 0 &&
-            filteredJobs?.map((job) => (
-              <JobCard
-                key={job?.id}
-                job={job}
-                onClick={() => {
-                  setSelectedJob(job);
-                  router.push(`/job-details/${job?.id}`);
-                }}
-              />
-            ))}
+          {filteredJobs.map((job, index) => {
+            const isLast = index === filteredJobs.length - 1;
+            return (
+              <div key={job.id} ref={isLast ? lastJobRef : null}>
+                <JobCard
+                  job={job}
+                  onClick={() => {
+                    setSelectedJob(job);
+                    router.push(`/job-details/${job.id}`);
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {loading && (
           <div className="flex justify-center mt-8">
             <LoadingSpinner />
-          </div>
-        )}
-
-        {!loading && filteredJobs?.length > 0 && filteredJobs?.length < 30 && (
-          <div className="flex justify-center mt-8">
-            <UIButton onClick={loadMore} title="Load More Jobs" />
           </div>
         )}
 
