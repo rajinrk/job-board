@@ -1,4 +1,5 @@
-'use client';import {
+'use client';
+import {
   MapPin,
   Building,
   Clock,
@@ -10,7 +11,7 @@ import { Text } from '@/ui-kits';
 import { Job } from '@/services/apis';
 import UIButton from '@/ui-kits/button';
 import { useAtom } from 'jotai';
-import { jobsAtom } from '@/services/store/jobStore';
+import { jobsAtom, selectedJobAtom } from '@/services/store/jobStore';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ApplicationModal from '@/components/job-apply-modal';
@@ -21,14 +22,18 @@ const JobDetail = () => {
   const [jobs, setJobs] = useAtom(jobsAtom);
   const [currentJob, setCurrentJob] = useState<Job | null>(null);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [selectedJob, setSelectedJob] = useAtom(selectedJobAtom);
 
   useEffect(() => {
     if (params?.id) {
-      const currJob = jobs?.find((item: Job) => item?.id == params?.id);
-
-      setCurrentJob(currJob as Job);
+      if (selectedJob && selectedJob.id === params.id) {
+        setCurrentJob(selectedJob);
+      } else {
+        const currJob = jobs?.find((item: Job) => item?.id == params?.id);
+        setCurrentJob(currJob as Job);
+      }
     }
-  }, []);
+  }, [params?.id, selectedJob, jobs]);
 
   const handleApplyNow = () => {
     setShowApplicationModal(true);
@@ -42,7 +47,7 @@ const JobDetail = () => {
       return elem;
     });
 
-    setCurrentJob({ ...currentJob, is_applied: true } as Job);
+    setSelectedJob({ ...currentJob, is_applied: true } as Job);
 
     setJobs(updatedJobs);
   };

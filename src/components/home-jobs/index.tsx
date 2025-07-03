@@ -1,9 +1,14 @@
-'use client';import { useState, useEffect } from 'react';
-import { useAtom } from 'jotai';
+'use client';
+import { useState, useEffect } from 'react';
+import { useAtom, useSetAtom } from 'jotai';
 import { toastError, Text } from '@/ui-kits';
 import UIButton from '@/ui-kits/button';
 
-import { jobsAtom, filtersAtom } from '@/services/store/jobStore';
+import {
+  jobsAtom,
+  filtersAtom,
+  selectedJobAtom,
+} from '@/services/store/jobStore';
 import { fetchJobs, Job } from '@/services/apis';
 import JobFilters from '../job-filters';
 import JobCard from '../job-card';
@@ -14,6 +19,7 @@ const HomeJobs = () => {
   const router = useRouter();
   const [jobs, setJobs] = useAtom(jobsAtom);
   const [filters] = useAtom(filtersAtom);
+  const setSelectedJob = useSetAtom(selectedJobAtom);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -111,6 +117,7 @@ const HomeJobs = () => {
                 key={job?.id}
                 job={job}
                 onClick={() => {
+                  setSelectedJob(job);
                   router.push(`/job-details/${job?.id}`);
                 }}
               />
